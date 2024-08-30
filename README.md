@@ -15,13 +15,14 @@ This Python script assists with upgrading Masterwork items in Diablo 4, specific
 3. Clone or download this repository to your local machine
 
 4. Open a command prompt in the project directory and install required Python libraries:
+   ```
+   pip install PySimpleGUI pyautogui pytesseract opencv-python numpy pywin32 keyboard
+   ```
 
-pip install PySimpleGUI pyautogui pytesseract opencv-python numpy pywin32 keyboard
-
-6. Update the Tesseract path in the script:
-- Open `masterwork.py` in a text editor
-- Find the line: `pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'`
-- Modify the path if your Tesseract installation is in a different location
+5. Update the Tesseract path in the script:
+   - Open `masterwork.py` in a text editor
+   - Find the line: `pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'`
+   - Modify the path if your Tesseract installation is in a different location
 
 ## Usage
 
@@ -61,8 +62,8 @@ Adjust these values as needed for your specific setup.
 
 ## Limitations
 
-The script is currently set up for the "counteroffensive" affix. Other affixes are untested.
-The performance may vary depending on your system and game settings.
+- The script is currently set up for the "counteroffensive" affix. Other affixes are untested.
+- The performance may vary depending on your system and game settings.
 
 ## Contributing
 
@@ -71,7 +72,3 @@ This project was created with minimal Python experience, using AI assistance. If
 ## Disclaimer
 
 This project is for educational purposes only. Use at your own risk. The creators are not responsible for any consequences of using this script. Always ensure you're complying with the game's terms of service when using external tools.
-
-This README provides comprehensive installation instructions, usage guidelines, important notes about the script's functionality, configuration details, known limitations, and a call for contributions. It also includes the disclaimer you mentioned. 
-
-Feel free to modify or expand any sections as you see fit before publishing on GitHub.
