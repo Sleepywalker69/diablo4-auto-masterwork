@@ -1,6 +1,6 @@
 # Diablo 4 Masterwork Upgrade Assistant
 
-This Python script assists with upgrading Masterwork items in Diablo 4, specifically targeting the "counteroffensive" affix.
+This Python script assists with upgrading Masterwork items in Diablo 4, specifically targeting a user-defined affix.
 
 ## Installation Instructions
 
@@ -27,47 +27,35 @@ This Python script assists with upgrading Masterwork items in Diablo 4, specific
 ## Usage
 
 1. Run the script via command prompt: `python masterwork.py`
-2. Use the GUI to set up button positions and the scan region
-3. Save the configuration
-4. Start the process
+2. Use the GUI to set up button positions and the scan region:
+   - Click "Get" next to each button to set its position
+   - For the scan region, click "Get" and then:
+     1. Click on the top-left corner of the desired scan area
+     2. Click on the bottom-right corner of the desired scan area
+3. Enter the target word (affix) and maximum count
+4. Save the configuration
+5. Start the process
 
 ## Important Notes
 
-- This script is experimental and may require adjustments based on your specific setup.
-- The 'P' key serves as a kill switch to stop the process. If the program doesn't stop immediately, hold the 'P' key for a few seconds until it terminates.
+- The 'P' key serves as a kill switch to stop the process. You can also use the "Stop Process" button in the GUI.
 - A wider scan area may increase the likelihood of false positives. It's recommended to keep the scan region focused.
-- The current configuration is optimized for a 2560x1440 resolution and the "counteroffensive" affix. For other affixes or resolutions, you may need to adjust the scan region accordingly.
-- If you switch from the "counteroffensive" affix to another, you'll need to redefine the scan region.
-- You can scan a portion of a word, as long as the scan region matches the desired text precisely.
-- This script is specifically set up for the "counteroffensive" affix. Other affixes have not been tested, and performance may vary depending on your system and game settings.
-- This project was developed with minimal Python experience and the help of AI tools. If you make improvements, please share them so we can collaboratively enhance the functionality and reliability of this tool.
-- If you need to change the target word, you'll need to edit line 149 of the script. Be sure to adjust the scan area accordingly.
+- The configuration is saved in `upgrade_config.json` and will be loaded automatically on subsequent runs.
+- This script is designed to work with any affix, not just "counteroffensive". Adjust the target word as needed.
+- The script's performance may vary depending on your system and game settings.
 
 ## Configuration
 
-The `upgrade_config.json` file contains the coordinates for various buttons and the scan region. The provided configuration is set up for 2560x1440 resolution:
-
-```json
-{
- "upgrade_button": [662, 1214],
- "skip_button": [474, 1100],
- "close_button": [474, 1100],
- "reset_button": [571, 464],
- "confirm_button": [375, 1267],
- "scan_region": [221, 913, 293, 47]
-}
-```
-
-Adjust these values as needed for your specific setup.
+The `upgrade_config.json` file contains the coordinates for various buttons, the scan region, target word, and max count. The configuration can be set and saved through the GUI.
 
 ## Limitations
 
-- The script is currently set up for the "counteroffensive" affix. Other affixes are untested.
 - The performance may vary depending on your system and game settings.
+- The script relies on image recognition, which may be affected by in-game graphical settings or overlays.
 
 ## Contributing
 
-This project was created with minimal Python experience, using AI assistance. If you make any improvements, please share them by creating an issue or submitting a pull request on GitHub. Working together, we can enhance the functionality and reliability of this tool.
+If you make any improvements, please share them by creating an issue or submitting a pull request on GitHub. Working together, we can enhance the functionality and reliability of this tool.
 
 ## Disclaimer
 
