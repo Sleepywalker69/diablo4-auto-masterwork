@@ -15,9 +15,10 @@ This Python script assists with upgrading Masterwork items in Diablo 4, specific
 3. Clone or download this repository to your local machine
 
 4. Open a command prompt in the project directory and install required Python libraries:
+
 pip install PySimpleGUI pyautogui pytesseract opencv-python numpy pywin32 keyboard
-Copy
-5. Update the Tesseract path in the script:
+
+6. Update the Tesseract path in the script:
 - Open `masterwork.py` in a text editor
 - Find the line: `pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'`
 - Modify the path if your Tesseract installation is in a different location
@@ -46,7 +47,7 @@ Copy
 
 The `upgrade_config.json` file contains the coordinates for various buttons and the scan region. The provided configuration is set up for 2560x1440 resolution:
 
-```json
+json
 {
  "upgrade_button": [662, 1214],
  "skip_button": [474, 1100],
