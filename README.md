@@ -25,9 +25,7 @@ pip install PySimpleGUI pyautogui pytesseract opencv-python numpy pywin32 keyboa
 
 ## Usage
 
-1. Run the script:
-python masterwork.py
-Copy
+1. Run the script: python masterwork.py
 2. Use the GUI to set up button positions and the scan region
 3. Save the configuration
 4. Start the process
@@ -47,7 +45,7 @@ Copy
 
 The `upgrade_config.json` file contains the coordinates for various buttons and the scan region. The provided configuration is set up for 2560x1440 resolution:
 
-json
+```json
 {
  "upgrade_button": [662, 1214],
  "skip_button": [474, 1100],
@@ -56,17 +54,23 @@ json
  "confirm_button": [375, 1267],
  "scan_region": [221, 913, 293, 47]
 }
+```
+
 Adjust these values as needed for your specific setup.
-Limitations
+
+## Limitations
 
 The script is currently set up for the "counteroffensive" affix. Other affixes are untested.
 The performance may vary depending on your system and game settings.
 
-Contributing
+## Contributing
+
 This project was created with minimal Python experience, using AI assistance. If you make any improvements, please share them by creating an issue or submitting a pull request on GitHub. Working together, we can enhance the functionality and reliability of this tool.
-Disclaimer
+
+## Disclaimer
+
 This project is for educational purposes only. Use at your own risk. The creators are not responsible for any consequences of using this script. Always ensure you're complying with the game's terms of service when using external tools.
-Copy
+
 This README provides comprehensive installation instructions, usage guidelines, important notes about the script's functionality, configuration details, known limitations, and a call for contributions. It also includes the disclaimer you mentioned. 
 
 Feel free to modify or expand any sections as you see fit before publishing on GitHub.
