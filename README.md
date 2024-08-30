@@ -25,7 +25,7 @@ pip install PySimpleGUI pyautogui pytesseract opencv-python numpy pywin32 keyboa
 
 ## Usage
 
-1. Run the script: python masterwork.py
+1. Run the script via command prompt: `python masterwork.py`
 2. Use the GUI to set up button positions and the scan region
 3. Save the configuration
 4. Start the process
