@@ -32,14 +32,15 @@ pip install PySimpleGUI pyautogui pytesseract opencv-python numpy pywin32 keyboa
 
 ## Important Notes
 
-- This script is experimental and may require adjustments for different setups
-- The 'P' key acts as a kill switch to stop the process
-- Note: The kill switch may not respond instantly. If the program doesn't stop immediately, hold down the 'P' key for a few seconds until it terminates.
-- Scanning a wider area may lead to more false positives, so keep the scan region focused
-- The current setup is optimized for 2560x1440 resolution and the "counteroffensive" affix
-- For other affixes or resolutions, you may need to adjust the scan region
-- If you change from "counteroffensive" to another affix, you will need to set up a new scan region area
-- You can scan just part of a word if desired, as long as the scan matches 1:1 with what you're looking for
+- This script is experimental and may require adjustments based on your specific setup.
+- The 'P' key serves as a kill switch to stop the process. If the program doesn't stop immediately, hold the 'P' key for a few seconds until it terminates.
+- A wider scan area may increase the likelihood of false positives. It's recommended to keep the scan region focused.
+- The current configuration is optimized for a 2560x1440 resolution and the "counteroffensive" affix. For other affixes or resolutions, you may need to adjust the scan region accordingly.
+- If you switch from the "counteroffensive" affix to another, you'll need to redefine the scan region.
+- You can scan a portion of a word, as long as the scan region matches the desired text precisely.
+- This script is specifically set up for the "counteroffensive" affix. Other affixes have not been tested, and performance may vary depending on your system and game settings.
+- This project was developed with minimal Python experience and the help of AI tools. If you make improvements, please share them so we can collaboratively enhance the functionality and reliability of this tool.
+- If you need to change the target word, you'll need to edit line 149 of the script. Be sure to adjust the scan area accordingly.
 
 ## Configuration
 
