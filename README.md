@@ -24,7 +24,7 @@ This Python script assists with upgrading Masterwork items in Diablo 4, specific
 
 4. Open a command prompt in the project directory and install required Python libraries:
    ```
-   pip install PySimpleGUI pyautogui pytesseract opencv-python numpy pywin32 keyboard
+   pip install PySimpleGUI pyautogui pytesseract opencv-python numpy pywin32 keyboard Pillow
    ```
 
 5. Update the Tesseract path in the script:
