@@ -9,10 +9,14 @@ import threading
 import time
 import win32gui
 import win32api
+import win32con
 import keyboard
 import logging
+import tkinter as tk
+from PIL import ImageGrab, ImageTk
 from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass, asdict
+import re 
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
@@ -99,10 +103,10 @@ class UpgradeProcess(threading.Thread):
                 scanned_text = scan_for_text(self.config.scan_region)
                 self.window.write_event_value('-UPDATE-', f"Scanned text: {scanned_text}")
                 
-                if self.config.target_word.lower() in scanned_text.lower():
+                if self.flexible_match(self.config.target_word, scanned_text):
                     click_button(*self.config.close_button)
                     count += 1
-                    self.window.write_event_value('-UPDATE-', f"Found '{self.config.target_word}'. Count: {count}")
+                    self.window.write_event_value('-UPDATE-', f"Found match for '{self.config.target_word}'. Count: {count}")
                 else:
                     self.reset_upgrade()
                     count = 0
@@ -113,7 +117,48 @@ class UpgradeProcess(threading.Thread):
                 time.sleep(5)  # Wait before retrying
 
         if not self.stop_event.is_set():
-            self.window.write_event_value('-UPDATE-', f"Found '{self.config.target_word}' {self.config.max_count} times. Process complete.")
+            self.window.write_event_value('-UPDATE-', f"Found matches for '{self.config.target_word}' {self.config.max_count} times. Process complete.")
+
+    def flexible_match(self, target: str, text: str) -> bool:
+        # Convert both strings to lowercase for case-insensitive matching
+        target = target.lower()
+        text = text.lower()
+        
+        # Function to replace multiple spaces with a single space and strip
+        def normalize_spaces(s: str) -> str:
+            return re.sub(r'\s+', ' ', s).strip()
+        
+        # Normalize spaces in both strings
+        target = normalize_spaces(target)
+        text = normalize_spaces(text)
+        
+        # Split the target into words, preserving special characters
+        target_words = target.split()
+        
+        # Function to check if a word is partially in the text
+        def partial_word_match(word: str, text: str) -> bool:
+            # Check for exact match first
+            if word in text:
+                return True
+            
+            # Check for partial match (at least half of the word)
+            min_match_length = max(3, len(word) // 2)
+            for i in range(len(text) - min_match_length + 1):
+                if text[i:i+min_match_length] in word:
+                    return True
+            return False
+        
+        # Check if all target words are partially in the text, in a flexible order
+        text_words = text.split()
+        matched_words = set()
+        
+        for target_word in target_words:
+            if any(partial_word_match(target_word, text_word) for text_word in text_words):
+                matched_words.add(target_word)
+        
+        # Consider it a match if we've matched all target words
+        return len(matched_words) == len(target_words)
+
 
     def perform_upgrade_cycle(self) -> None:
         for _ in range(4):
@@ -153,20 +198,58 @@ def get_mouse_position(window: sg.Window, key: str) -> Tuple[int, int]:
     window.un_hide()
     return position
 
-def get_scan_region(window: sg.Window) -> Tuple[int, int, int, int]:
-    window.hide()
-    popup = sg.Window("Get Scan Region", [[sg.Text("Click on the top-left corner of the scan region")]], no_titlebar=True, keep_on_top=True, finalize=True)
-    
-    top_left = get_mouse_click()
-    
-    popup.close()
-    popup = sg.Window("Get Scan Region", [[sg.Text("Click on the bottom-right corner of the scan region")]], no_titlebar=True, keep_on_top=True, finalize=True)
-    
-    bottom_right = get_mouse_click()
-    
-    popup.close()
-    window.un_hide()
-    return (top_left[0], top_left[1], bottom_right[0] - top_left[0], bottom_right[1] - top_left[1])
+def make_window_transparent(window):
+    hwnd = window.TKroot.winfo_id()
+    win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE,
+                           win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE) | win32con.WS_EX_LAYERED | win32con.WS_EX_TRANSPARENT)
+    win32gui.SetLayeredWindowAttributes(hwnd, win32api.RGB(0, 0, 0), 0, win32con.LWA_COLORKEY)
+
+def get_scan_region():
+    root = tk.Tk()
+    root.attributes('-alpha', 0.3)  # Set window transparency
+    root.attributes('-fullscreen', True)
+    root.configure(background='grey')
+
+    canvas = tk.Canvas(root, cursor="cross")
+    canvas.pack(fill=tk.BOTH, expand=True)
+
+    rect = None
+    start_x = start_y = 0
+    region = None
+
+    def on_mouse_down(event):
+        nonlocal start_x, start_y, rect
+        start_x, start_y = event.x, event.y
+        if rect:
+            canvas.delete(rect)
+        rect = canvas.create_rectangle(start_x, start_y, start_x, start_y, outline='red', width=2)
+
+    def on_mouse_move(event):
+        nonlocal rect
+        if rect:
+            canvas.delete(rect)
+            rect = canvas.create_rectangle(start_x, start_y, event.x, event.y, outline='red', width=2)
+
+    def on_mouse_up(event):
+        nonlocal region
+        end_x, end_y = event.x, event.y
+        region = (min(start_x, end_x), min(start_y, end_y), 
+                  abs(end_x - start_x), abs(end_y - start_y))
+        root.quit()
+
+    def on_key(event):
+        if event.keysym == 'Escape':
+            root.quit()
+
+    canvas.bind("<ButtonPress-1>", on_mouse_down)
+    canvas.bind("<B1-Motion>", on_mouse_move)
+    canvas.bind("<ButtonRelease-1>", on_mouse_up)
+    root.bind("<Key>", on_key)
+
+    root.mainloop()
+    root.destroy()
+
+    return region
 
 def create_main_window(config: Config) -> sg.Window:
     layout = [
@@ -200,14 +283,19 @@ def main():
     upgrade_process = None
 
     while True:
-        event, values = window.read(timeout=100)
+        event, values = window.read()
         if event == sg.WINDOW_CLOSED or event == "Exit":
             break
         elif event.startswith('GET_'):
             key = event.replace('GET_', '')
             if key == 'SCAN_REGION':
-                region = get_scan_region(window)
-                window['SCAN_REGION'].update(','.join(map(str, region)))
+                window.hide()  # Hide the main window before opening the region selector
+                region = get_scan_region()
+                window.un_hide()  # Show the main window again
+                if region:
+                    window['SCAN_REGION'].update(','.join(map(str, region)))
+                else:
+                    window['OUTPUT'].print("Region selection cancelled or no region selected.")
             else:
                 position = get_mouse_position(window, key)
                 window[key].update(f"{position[0]},{position[1]}")
