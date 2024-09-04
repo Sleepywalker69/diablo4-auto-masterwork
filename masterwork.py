@@ -34,11 +34,24 @@ class Config:
     reset_button: Tuple[int, int]
     confirm_button: Tuple[int, int]
     scan_region: Tuple[int, int, int, int]
-    target_word: str = "Dust"
-    max_count: int = 3
+    target_word: str
+    max_count: int
+    imprinted_check_enabled: bool  # New field for the toggle
+    imprinted_first_value: float  # Only used when imprinted_check_enabled is True
 
 def load_config() -> Config:
-    default_config = Config((0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0, 0, 0))
+    default_config = Config(
+        upgrade_button=(0, 0),
+        skip_button=(0, 0),
+        close_button=(0, 0),
+        reset_button=(0, 0),
+        confirm_button=(0, 0),
+        scan_region=(0, 0, 0, 0),
+        target_word="",
+        max_count=3,
+        imprinted_check_enabled=False,
+        imprinted_first_value=0.0
+    )
     try:
         if os.path.exists(CONFIG_FILE):
             with open(CONFIG_FILE, 'r') as f:
@@ -94,22 +107,48 @@ class UpgradeProcess(threading.Thread):
         self.config = config
         self.window = window
         self.stop_event = threading.Event()
+        self.previous_value = None
+        self.imprinted_detected = False
 
     def run(self) -> None:
         count = 0
         while count < self.config.max_count and not self.stop_event.is_set():
             try:
                 self.perform_upgrade_cycle()
-                scanned_text = scan_for_text(self.config.scan_region)
+                scanned_text = scan_for_text(self.config.scan_region)  # Use the existing function
                 self.window.write_event_value('-UPDATE-', f"Scanned text: {scanned_text}")
                 
                 if self.flexible_match(self.config.target_word, scanned_text):
-                    click_button(*self.config.close_button)
-                    count += 1
-                    self.window.write_event_value('-UPDATE-', f"Found match for '{self.config.target_word}'. Count: {count}")
+                    current_value = self.extract_numeric_value(scanned_text)
+                    
+                    if self.config.imprinted_check_enabled:
+                        if not self.imprinted_detected and abs(current_value - self.config.imprinted_first_value) < 0.001:
+                            self.imprinted_detected = True
+                            self.previous_value = current_value
+                            click_button(*self.config.close_button)
+                            count += 1
+                            self.window.write_event_value('-UPDATE-', f"Found imprinted affix with expected value {current_value}. Count: {count}")
+                        elif self.imprinted_detected and current_value > self.previous_value:
+                            self.previous_value = current_value
+                            click_button(*self.config.close_button)
+                            count += 1
+                            self.window.write_event_value('-UPDATE-', f"Found match with increased value {current_value}. Count: {count}")
+                        else:
+                            self.window.write_event_value('-UPDATE-', f"Found match but value did not increase or not imprinted. Continuing...")
+                    else:
+                        # Original logic when imprinted check is disabled
+                        if self.previous_value is None or current_value > self.previous_value:
+                            self.previous_value = current_value
+                            click_button(*self.config.close_button)
+                            count += 1
+                            self.window.write_event_value('-UPDATE-', f"Found match with value {current_value}. Count: {count}")
+                        else:
+                            self.window.write_event_value('-UPDATE-', f"Found match but value did not increase. Continuing...")
                 else:
                     self.reset_upgrade()
                     count = 0
+                    self.previous_value = None
+                    self.imprinted_detected = False
                 time.sleep(1)
             except Exception as e:
                 logging.error(f"Error in upgrade process: {e}")
@@ -117,7 +156,7 @@ class UpgradeProcess(threading.Thread):
                 time.sleep(5)  # Wait before retrying
 
         if not self.stop_event.is_set():
-            self.window.write_event_value('-UPDATE-', f"Found matches for '{self.config.target_word}' {self.config.max_count} times. Process complete.")
+            self.window.write_event_value('-UPDATE-', f"Completed {self.config.max_count} upgrades for '{self.config.target_word}'. Process complete.")
 
     def flexible_match(self, target: str, text: str) -> bool:
         # Convert both strings to lowercase for case-insensitive matching
@@ -158,7 +197,12 @@ class UpgradeProcess(threading.Thread):
         
         # Consider it a match if we've matched all target words
         return len(matched_words) == len(target_words)
-
+    
+    def extract_numeric_value(self, text: str) -> float:
+        numbers = re.findall(r'-?\d+\.?\d*', text)
+        if numbers:
+            return max(float(num) for num in numbers)
+        return 0.0    
 
     def perform_upgrade_cycle(self) -> None:
         for _ in range(4):
@@ -262,10 +306,16 @@ def create_main_window(config: Config) -> sg.Window:
         [sg.Text("Scan Region:"), sg.Input(key='SCAN_REGION', default_text=','.join(map(str, config.scan_region)), size=(20, 1)), sg.Button("Get", key='GET_SCAN_REGION')],
         [sg.Text("Target Word:"), sg.Input(key='TARGET_WORD', default_text=config.target_word, size=(15, 1))],
         [sg.Text("Max Count:"), sg.Input(key='MAX_COUNT', default_text=str(config.max_count), size=(5, 1))],
+        [sg.Checkbox("Enable Imprinted Affix Check", default=config.imprinted_check_enabled, key="-IMPRINTED_CHECK-")],
+        [sg.Text("Imprinted First Value:"), sg.Input(key="-IMPRINTED_FIRST_VALUE-", default_text=str(config.imprinted_first_value), size=(10, 1), disabled=not config.imprinted_check_enabled)],
         [sg.Button("Save Configuration"), sg.Button("Start Process"), sg.Button("Stop Process"), sg.Button("Exit")],
-        [sg.Multiline(size=(60, 10), key='OUTPUT', disabled=True)]
+        [sg.Multiline(size=(60, 10), key="-OUTPUT-", disabled=True)]
     ]
-    return sg.Window("Upgrade and Check", layout, finalize=True)
+    window = sg.Window("Upgrade and Check", layout, finalize=True)
+    
+    # Add event to enable/disable the Imprinted First Value input based on checkbox
+    window["-IMPRINTED_CHECK-"].bind("<ButtonRelease-1>", " TOGGLE")
+    return window
 
 def validate_config(config: Config) -> bool:
     if any(v == (0, 0) for v in [config.upgrade_button, config.skip_button, config.close_button, config.reset_button, config.confirm_button]):
@@ -277,25 +327,26 @@ def validate_config(config: Config) -> bool:
     return True
 
 def main():
-    config = load_config()
+    config = load_config()  # Assume this function loads the configuration from a file
     window = create_main_window(config)
-
     upgrade_process = None
 
     while True:
-        event, values = window.read()
+        event, values = window.read(timeout=100)
         if event == sg.WINDOW_CLOSED or event == "Exit":
             break
+        elif event == "-IMPRINTED_CHECK- TOGGLE":
+            window["-IMPRINTED_FIRST_VALUE-"].update(disabled=not values["-IMPRINTED_CHECK-"])
         elif event.startswith('GET_'):
             key = event.replace('GET_', '')
             if key == 'SCAN_REGION':
-                window.hide()  # Hide the main window before opening the region selector
+                window.hide()
                 region = get_scan_region()
-                window.un_hide()  # Show the main window again
+                window.un_hide()
                 if region:
                     window['SCAN_REGION'].update(','.join(map(str, region)))
                 else:
-                    window['OUTPUT'].print("Region selection cancelled or no region selected.")
+                    window['-OUTPUT-'].print("Region selection cancelled or no region selected.")
             else:
                 position = get_mouse_position(window, key)
                 window[key].update(f"{position[0]},{position[1]}")
@@ -309,44 +360,48 @@ def main():
                     confirm_button=tuple(map(int, values['CONFIRM'].split(','))),
                     scan_region=tuple(map(int, values['SCAN_REGION'].split(','))),
                     target_word=values['TARGET_WORD'],
-                    max_count=int(values['MAX_COUNT'])
+                    max_count=int(values['MAX_COUNT']),
+                    imprinted_check_enabled=values["-IMPRINTED_CHECK-"],
+                    imprinted_first_value=float(values["-IMPRINTED_FIRST_VALUE-"]) if values["-IMPRINTED_CHECK-"] else 0.0
                 )
                 if validate_config(new_config):
                     save_config(new_config)
                     config = new_config
-                    window['OUTPUT'].print("Configuration saved successfully.")
+                    window['-OUTPUT-'].print("Configuration saved successfully.")
                 else:
-                    window['OUTPUT'].print("Invalid configuration. Please check all fields.")
+                    window['-OUTPUT-'].print("Invalid configuration. Please check all fields.")
             except ValueError:
-                window['OUTPUT'].print("Invalid input. Please check all fields.")
+                window['-OUTPUT-'].print("Invalid input. Please check all fields.")
         elif event == "Start Process":
             if upgrade_process is None or not upgrade_process.is_alive():
                 if validate_config(config):
                     upgrade_process = UpgradeProcess(config, window)
                     upgrade_process.start()
+                    window['-OUTPUT-'].print("Upgrade process started.")
                 else:
-                    window['OUTPUT'].print("Invalid configuration. Please check all fields.")
+                    window['-OUTPUT-'].print("Invalid configuration. Please check all fields.")
             else:
-                window['OUTPUT'].print("Process is already running.")
+                window['-OUTPUT-'].print("Process is already running.")
         elif event == "Stop Process":
             if upgrade_process and upgrade_process.is_alive():
-                upgrade_process.stop()
+                upgrade_process.stop_event.set()
                 upgrade_process.join()
-                window['OUTPUT'].print("Process stopped.")
+                upgrade_process = None
+                window['-OUTPUT-'].print("Process stopped.")
             else:
-                window['OUTPUT'].print("No process is running.")
+                window['-OUTPUT-'].print("No process is running.")
         elif event == '-UPDATE-':
-            window['OUTPUT'].print(values['-UPDATE-'])
+            window['-OUTPUT-'].print(values['-UPDATE-'])
         
         # Check for 'P' key press to terminate the process
         if keyboard.is_pressed('p') and upgrade_process and upgrade_process.is_alive():
-            upgrade_process.stop()
+            upgrade_process.stop_event.set()
             upgrade_process.join()
-            window['OUTPUT'].print("Process terminated by user (P key pressed)")
             upgrade_process = None
+            window['-OUTPUT-'].print("Process terminated by user (P key pressed)")
 
     if upgrade_process and upgrade_process.is_alive():
-        upgrade_process.stop()
+        upgrade_process.stop_event.set()
         upgrade_process.join()
 
     window.close()
